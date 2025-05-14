@@ -14,7 +14,7 @@ from gene_gan import GENEGAN
 
 def experiment01():
     '''
-    Thí nghiệm này sinh một network từ một mạng có sẵn
+    This experiment generates a network from an existing network.
     '''
     network = GeneNetwork(fr"C:\caocao\gnw-master\tave_gen\hybrid\s10\sample1_network.txt", 
                         fr"C:\caocao\gnw-master\tave_gen\hybrid\s10\sample1_goldstandard.txt",None, False, 
