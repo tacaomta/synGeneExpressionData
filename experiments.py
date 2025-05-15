@@ -357,11 +357,16 @@ def experiment10(time_series_folder, gold_standard_folder, output_folder):
                     header+='\t'+f'G{i+1}'
                 np.savetxt(path, syn_network, delimiter='\t', header=header, fmt='%s')
 
-def experiment11():
+def experiment11(time_series_folder, gold_standard_folder, output_folder):
     '''
-    Từ các mạng dữ liệu đầu vào, module này add thêm tỷ lệ nhiễu để tạo ra các mạng mới,
-    phục vụ cho các thử nghiệm trên các tập dữ liệu có nhiễu
-    Tỷ lệ nhiễu thêm vào là 5%, 10%
+    From the input data networks, this module adds noise ratio to create new networks, 
+    serving for testing on noisy data sets. 
+    The added noise ratio is 5%, 10%
+    -------------------------------------
+    Args:
+    time_series_folder - The folder where the timeseries files are located.
+    gold_standard_folder - The folder where the gold standard files are located.
+    output_folder - the output folder
     '''
     sizes=[10, 50, 100]
     sps=[i for i in range(1,11, 1)]
@@ -369,18 +374,23 @@ def experiment11():
     stps = [(0,i) for i in range(10,51,10)]
     for size in sizes:
         for sp in sps:            
-            network = GeneNetwork(fr'C:\caocao\gnw-master\tave_gen\simple test\size{size}\sample{sp}_network.txt', 
-                            fr'C:\caocao\gnw-master\tave_gen\simple test\size{size}\sample{sp}_goldstandard.txt', timeseries=False)
+            network = GeneNetwork(fr'{time_series_folder}\size{size}\sample{sp}_network.txt', 
+                            fr'{gold_standard_folder}\size{size}\sample{sp}_goldstandard.txt', timeseries=False)
             for start, end in stps:
                 for noise_rate in noise_rates:
                     sub_network = network.getSubTimeStepsData(start, end)
                     sub_network = sub_network.addNoise(noise_rate)
-                    sub_network.to_txt(fr'C:\caocao\gnw-master\tave_gen\simple test\withnoise\size{size}\sp{sp}_noise_{noise_rate}_{start}_{end}.txt')
+                    sub_network.to_txt(fr'{output_folder}\size{size}\sp{sp}_noise_{noise_rate}_{start}_{end}.txt')
         
 
-def experiment12():
+def experiment12(time_series_folder, gold_standard_folder, output_folder):
     '''
-    Thí nghiệm kiểm tra thuật toán truy hồi đối với nhiều mạng được chia nhỏ và bổ sung vào đó các tỷ lệ nhiễu
+    Run MIDNI with networks generated from the Experiment 11
+    -------------------------------------
+    Args:
+    time_series_folder - The folder where the timeseries files are located.
+    gold_standard_folder - The folder where the gold standard files are located.
+    output_folder - the output folder
     '''
     #sizes=[i for i in range(10, 101, 10)]
     sizes=[10, 50, 100]
@@ -393,8 +403,8 @@ def experiment12():
             for sp in sps:            
                 for start, end in stps:
                     experiment = {'timesteps': False, 'steps': None}
-                    network_info = {'timeseries': fr'C:\caocao\gnw-master\tave_gen\simple test\withnoise\size{size}\sp{sp}_noise_{rate}_{start}_{end}.txt',
-                                    'goldstandard': fr'C:\caocao\gnw-master\tave_gen\simple test\size{size}\sample{sp}_goldstandard.txt',
+                    network_info = {'timeseries': fr'{time_series_folder}\size{size}\sp{sp}_noise_{rate}_{start}_{end}.txt',
+                                    'goldstandard': fr'{gold_standard_folder}\size{size}\sample{sp}_goldstandard.txt',
                                     'goldstandard_signed': None,
                                     'real_value': False,
                                     'print_out': False}
@@ -406,13 +416,17 @@ def experiment12():
                     evaluation_params = {'print_out': True}
 
                     precision, recall, structural, dynamics, sample = Pipeline(network_info, kmean_params, mibni_params, evaluation_params, experiment).execute()
-                    result[f'sample{sp}_rate{rate}_{start}_{end}'] = {'precison': precision, 'recall': recall, 'structural': structural, 'dynamics':dynamics}
+                    result[f'sample{sp}_rate{rate}_{start}_{end}'] = {'precision': precision, 'recall': recall, 'structural': structural, 'dynamics':dynamics}
             result = pd.DataFrame(result)
-            result.to_csv(fr'C:\caocao\gnw-master\tave_gen\simple test\withnoise\size{size}\full_size{size}_noise_{rate}.csv')               
+            result.to_csv(fr'{output_folder}\size{size}\full_size{size}_noise_{rate}.csv')               
 
-def experiment13():
+def experiment13(time_series_folder, models_folder):
     '''
-    Thí nghiệm tạo ra các mô hình autoencoder được huấn luyện trên các mạng được cho thêm nhiễu vào
+    Training an autoencoder on the noisy datasets
+    -------------------------------------
+    Args:
+    time_series_folder - The folder where the timeseries files are located.
+    models_folder - The folder where the trained models are saved.
     '''
     sizes=[10, 50, 100]
     sps=[i for i in range(1,11, 1)]
@@ -422,104 +436,49 @@ def experiment13():
         for rate in noise_rates:
             for sp in sps:            
                 for start, end in stps:
-                    network = GeneNetwork(fr"C:\caocao\gnw-master\tave_gen\simple test\withnoise\size{size}\sp{sp}_noise_{rate}_{start}_{end}.txt", 
+                    network = GeneNetwork(fr"{time_series_folder}\size{size}\sp{sp}_noise_{rate}_{start}_{end}.txt", 
                                         None,None, False, print_out=False)
                     
                     epochs = 5000 if size==10 else 8000 if size==50 else 10000
-                    path = fr'C:\caocao\gnw-master\tave_gen\simple test\withnoise\models\ae_{size}_samp{sp}_noise{rate}_{start}_{end}.h5'
+                    path = fr'{models_folder}\ae_{size}_samp{sp}_noise{rate}_{start}_{end}.h5'
                     vae = GVAE(network)
                     vae.fit(epochs=epochs, model_save=path)
 
-def experiment14():
+def experiment14(time_series_folder, gold_standard_folder, output_folder):
     '''
-    Thử nghiệm sinh mạng giả từ mô hình đã được huấn luyện trên các tập dữ liệu
-    gốc hạn chế theo timestep. Mạng sinh ra có timestep nhiều hơn so với mạng gốc được huấn luyện
-    Dữ liệu sinh ra theo phương pháp từng step một. Dùng một autoencoder khác đã được huấn luyện để
-    sinh ra từng step này...Mạng giả được sinh ra dựa trên mô hình đã được huấn luyện trên các
-    tập dữ liệu có nhiễu (noise_rate = 5,10%)
+    Run experiment 10 on the datasets with noise
+    -------------------------------------
+    Args:
+    time_series_folder - The folder where the timeseries files are located.
+    gold_standard_folder - The folder where the gold standard files are located.
+    output_folder - the output folder
     '''
-    sizes=[10, 50, 100]
-    sps=[i for i in range(1,11, 1)]
-    stps = [(0,i) for i in range(10,51,10)]
-    noise_rates = [5, 10]
-    for size in sizes:
-        for sp in sps:            
-            for rate in noise_rates:            
-                for start, end in stps:
-                    network = GeneNetwork(fr'C:\caocao\gnw-master\tave_gen\simple test\withnoise\size{size}\sp{sp}_noise_{rate}_{start}_{end}.txt', 
-                                None, timeseries=False)
-                    autoencoder = load_model(fr'C:\caocao\gnw-master\tave_gen\simple test\withnoise\models\ae_{size}_samp{sp}_noise{rate}_{start}_{end}.h5')
-                    generated_latent_points = network.to_latents()
-                    synthetic_data = autoencoder.predict(generated_latent_points)
+    
+    experiment10(time_series_folder, gold_standard_folder, output_folder)
 
-                    synthetic_data = np.abs(np.round(synthetic_data))
-                    synthetic_data = np.clip(synthetic_data, 0, 2)
-                    synthetic_data = synthetic_data.astype(int)
-                    syn_network = []
-                    for i in range(len(synthetic_data)):
-                        syn_network.append(list(synthetic_data[i])[:network.size])
-                        if i==len(synthetic_data)-1:
-                            syn_network.append(list(synthetic_data[i])[network.size:])
-
-                    # print(syn_network[-1])
-                    # vt = np.array(syn_network[-1])
-                    # vt = np.reshape(vt, (-1,network.size))
-                    # print(vt)
-                    # Sinh tiếp các bước tiếp theo sử dụng autoencoder đã được huấn luyện để dự đoán giá trị của những bước tiếp theo
-                    ae_vt = load_model(fr'C:\caocao\gnw-master\tave_gen\simple test\withnoise\models_vt\ae_{size}_{sp}_noise_{rate}_{start}_{end}.h5')
-                    for i in range(network.timestepsNumber - end):
-                        vt = np.reshape(np.array(syn_network[-1]), (-1,network.size))
-                        vt_plus = ae_vt.predict(vt)
-                        vt_plus = np.abs(np.round(vt_plus))
-                        vt_plus = np.clip(vt_plus, 0, 2)
-                        vt_plus = vt_plus.astype(int)
-                        syn_network.append(list(vt_plus[0]))
-                    for i, row in enumerate(syn_network):
-                        row.insert(0, i)
-                    syn_network = np.array(syn_network)
-                    path = fr'C:\caocao\gnw-master\tave_gen\simple test\withnoise\synthetic\size{size}\syn_samp{sp}_noise{rate}_{start}_{end}.txt'
-                    header = 'Time'
-                    for i in range(network.size):
-                        header+='\t'+f'G{i+1}'
-                    np.savetxt(path, syn_network, delimiter='\t', header=header, fmt='%s')
-
-def experiment15():
+def experiment15(time_series_folder, gold_standard_folder, output_folder):
     '''
-    Thí nghiệm kiểm tra thuật toán truy hồi đối với nhiều mạng được giả được sinh ra từ các mạng gốc có nhiễu
+    Run MIDNI on datasets with noise generated from experiment 14
+    -------------------------------------
+    Args:
+    time_series_folder - The folder where the timeseries files are located.
+    gold_standard_folder - The folder where the gold standard files are located.
+    output_folder - the output folder
     '''
-    #sizes=[i for i in range(10, 101, 10)]
-    sizes=[10, 50, 100]
-    sps=[i for i in range(1,11, 1)]
-    stps = [(0,i) for i in range(10,51,10)]
-    noise_rates = [5, 10]
-    for size in sizes:        
-        for rate in noise_rates:
-            result={}
-            for sp in sps:            
-                for start, end in stps:
-                    experiment = {'timesteps': False, 'steps': None}
-                    network_info = {'timeseries': fr'C:\caocao\gnw-master\tave_gen\simple test\withnoise\synthetic\size{size}\syn_samp{sp}_noise{rate}_{start}_{end}.txt',
-                                    'goldstandard': fr'C:\caocao\gnw-master\tave_gen\simple test\size{size}\sample{sp}_goldstandard.txt',
-                                    'goldstandard_signed': None,
-                                    'real_value': False,
-                                    'print_out': False}
-
-                    kmean_params = {}
-
-                    mibni_params = {'timelag': 1, 'K_max': 5, 'print_out': False}
-
-                    evaluation_params = {'print_out': True}
-
-                    precision, recall, structural, dynamics, sample = Pipeline(network_info, kmean_params, mibni_params, evaluation_params, experiment).execute()
-                    result[f'sample{sp}_rate{rate}_{start}_{end}'] = {'precison': precision, 'recall': recall, 'structural': structural, 'dynamics':dynamics}
-            result = pd.DataFrame(result)
-            result.to_csv(fr'C:\caocao\gnw-master\tave_gen\simple test\withnoise\synthetic\size{size}\full_size{size}_noise_{rate}.csv')     
+    experiment12(time_series_folder, gold_standard_folder, output_folder)
 
 
-def experiment16():
+def experiment16(original_folder, synthetic_folder, output_folder):
     '''
-    Thí nghiệm so sánh sự khác biệt giữa 2 mạng: mạng gốc và mạng giả
-    Kết quả trả về là giá trị được đo bằng số lần khác biệt trên mỗi gen / tổng số lần giá trị trong mạng
+    Experiment comparing the difference between an original network and a synthetic network
+    -------------------------------------
+    Args:
+    original_folder - The folder where the original networks are located.
+    synthetic_folder - The folder where the synthetic networks are located.
+    output_folder - the output folder
+    -------------------------------------
+    Returns:
+    The result is the value measured by the number of differences per gene / total number of values ​​in the network
     '''
     sizes=[10, 50, 100]
     sps=[i for i in range(1,11, 1)]
@@ -527,49 +486,35 @@ def experiment16():
     for size in sizes:   
         result = {}    
         for sp in sps:        
-            original_network = GeneNetwork(fr'C:\caocao\gnw-master\tave_gen\simple test\size{size}\sample{sp}_network.txt', 
+            original_network = GeneNetwork(fr'{original_folder}\size{size}\sample{sp}_network.txt', 
                                 None, timeseries=False)  
             for start, end in stps:
-                synthetic_network = GeneNetwork(fr'C:\caocao\gnw-master\tave_gen\simple test\ae_ct_network\size{size}\syn_samp{sp}_{start}_{end}.txt', 
+                synthetic_network = GeneNetwork(fr'{synthetic_folder}\size{size}\syn_samp{sp}_{start}_{end}.txt', 
                                 None, timeseries=False)
                 result[f'sp{sp}_{start}_{end}'], matrix = synthetic_network.compareTo(original_network)
                 plt.clf()
                 sns.heatmap(matrix, annot=False, cmap='YlGnBu')
                 plt.title(f'Differences between [sp{sp}_{start}_{end}] - [sp{sp}]')
-                plt.savefig(fr'C:\caocao\gnw-master\tave_gen\simple test\ae_ct_network\size{size}\differences\sp{sp}_{start}_{end}.png')
+                plt.savefig(fr'{output_folder}\size{size}\differences\sp{sp}_{start}_{end}.png')
         
         result = pd.DataFrame(result, index=[0])
-        result.to_csv(fr'C:\caocao\gnw-master\tave_gen\simple test\ae_ct_network\size{size}\differences\compare_detail.csv')                       
+        result.to_csv(fr'{output_folder}\size{size}\differences\compare_detail.csv')                       
 
 
 
-def experiment17():
+def experiment17(original_folder, synthetic_folder, output_folder):
     '''
-    Thí nghiệm so sánh sự khác biệt giữa 2 mạng: mạng gốc và mạng giả
-    Kết quả trả về là giá trị được đo bằng số lần khác biệt trên mỗi gen / tổng số lần giá trị trong mạng
-    Thí nghiệm được thực hiện với mạng dữ liệu có nhiễu
+    Experiment comparing the difference between an original network and a synthetic network (For the datasets with noise)
+    -------------------------------------
+    Args:
+    original_folder - The folder where the original networks are located.
+    synthetic_folder - The folder where the synthetic networks are located.
+    output_folder - the output folder
+    -------------------------------------
+    Returns:
+    The result is the value measured by the number of differences per gene / total number of values ​​in the network
     '''
-    sizes=[10, 50, 100]
-    sps=[i for i in range(1,11, 1)]
-    stps = [(0,i) for i in range(10,51,10)]
-    noise_rates = [5, 10]
-    for size in sizes:           
-        for rate in noise_rates:  
-            result = {}  
-            for sp in sps:                        
-                for start, end in stps:
-                    original_network = GeneNetwork(fr'C:\caocao\gnw-master\tave_gen\simple test\withnoise\size{size}\sp{sp}_noise_{rate}_{start}_{end}.txt', 
-                                    None, timeseries=False)  
-                    synthetic_network = GeneNetwork(fr'C:\caocao\gnw-master\tave_gen\simple test\withnoise\synthetic\size{size}\syn_samp{sp}_noise{rate}_{start}_{end}.txt', 
-                                    None, timeseries=False)
-                    result[f'sp{sp}_{start}_{end}'], matrix = synthetic_network.compareTo(original_network)
-                    plt.clf()
-                    sns.heatmap(matrix, annot=False, cmap='YlGnBu')
-                    plt.title(f'Differences between [sp{sp}_{start}_{end}] with noise {rate}')
-                    plt.savefig(fr'C:\caocao\gnw-master\tave_gen\simple test\withnoise\synthetic\size{size}\differences\sp{sp}_{start}_{end}_noise{rate}.png')
-            
-            result = pd.DataFrame(result, index=[0])
-            result.to_csv(fr'C:\caocao\gnw-master\tave_gen\simple test\withnoise\synthetic\size{size}\differences\compare_detail_noise{rate}.csv')
+    experiment16(original_folder, synthetic_folder, output_folder)
 
 
 ########################## Điều chỉnh các tham số khi huấn luyện tập dữ liệu không có nhiễu #######################
