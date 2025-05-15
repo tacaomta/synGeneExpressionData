@@ -20,28 +20,23 @@ def experiment01(time_series_file, gold_standard_file, output_file):
     gold_standard_file - Path of a gold standard file
     output_file - Path of the output file.
     '''
-    network = GeneNetwork(fr"C:\caocao\gnw-master\tave_gen\hybrid\s10\sample1_network.txt", 
-                        fr"C:\caocao\gnw-master\tave_gen\hybrid\s10\sample1_goldstandard.txt",None, False, 
-                                    print_out=False)
-
-    outpath = fr'C:\caocao\2023\CodeSpace\BooleanInference\myMIBNI\networks\size10.txt'
-
+    network = GeneNetwork(time_series_file, gold_standard_file ,None, False, print_out=False)
     vae = GVAE(network)
     #vae.fit(epochs=10000)
-    vae.sample(outpath, rows=network.timestepsNumber)
+    vae.sample(output_file, rows=network.timestepsNumber)
 
 
-def experiment02():
+def experiment02(time_series_file, gold_standard_file):
     '''
-    Thí nghiệm kiểm tra thuật toán truy hồi đối với mạng được sinh ra bởi autoencoder
+    Evaluate generated networks with MIDNI algorithms
+    Args:
+    time_series_file - Path of a generated network
+    gold_standard_file - Path of a gold standard file
     '''
     
     experiment = {'timesteps': False, 'steps': None}
-
-    #C:\caocao\2023\CodeSpace\BooleanInference\myMIBNI\networks\size10.txt
-    #C:\caocao\gnw-master\tave_gen\hybrid\s10\sample1_network.txt
-    network_info = {'timeseries': fr'C:\caocao\2023\CodeSpace\BooleanInference\myMIBNI\networks\size10.txt',
-                    'goldstandard': fr'C:\caocao\gnw-master\tave_gen\hybrid\s10\sample1_goldstandard.txt',
+    network_info = {'timeseries': time_series_file,
+                    'goldstandard': gold_standard_file,
                     'goldstandard_signed': None,
                     'real_value': False,
                     'print_out': False}
@@ -56,29 +51,34 @@ def experiment02():
     print('precision = ', precision, 'recall = ', recall, 'structural = ', structural, 'dynamics = ',dynamics) 
 
 
-def experiment03():
+def experiment03(time_series_folder, gold_standard_folder, output_folder):
     '''
-    Thí nghiệm này sinh nhiều network từ nhiều mạng training khác nhau
+    Run new experiment 1 on different datasets
+    Args:
+    time_series_folder - The folder where the timeseries files are located.
+    gold_standard_folder - The folder where the gold standard files are located.
+    output_folder - the output folder
     '''
     sizes=[i for i in range(10, 101, 10)]
     sps=[i for i in range(1,11, 1)]
     for size in sizes:
         for sp in sps:
 
-            network = GeneNetwork(fr"C:\caocao\gnw-master\tave_gen\simple test\size{size}\sample{sp}_network.txt", 
-                                fr"C:\caocao\gnw-master\tave_gen\simple test\size{size}\sample{sp}_goldstandard.txt",None, False, 
-                                            print_out=False)
-
-            outpath = fr'C:\caocao\gnw-master\tave_gen\simple test\fake\size{size}\f_sample{sp}_network.txt'
-
+            time_series_file = fr"{time_series_folder}\size{size}\sample{sp}_network.txt"
+            gold_standard_file = fr"{gold_standard_folder}\size{size}\sample{sp}_goldstandard.txt"
+            network = GeneNetwork(time_series_file, gold_standard_file ,None, False, print_out=False)
+            outpath = fr'{output_folder}\size{size}\f_sample{sp}_network.txt'
             vae = GVAE(network)
             vae.fit(epochs=10000)
             vae.sample(outpath, rows=network.timestepsNumber)
 
-
-def experiment04():
+def experiment04(time_series_folder, gold_standard_folder, output_folder):
     '''
-    Thí nghiệm kiểm tra thuật toán truy hồi đối với nhiều mạng được sinh ra bởi autoencoder
+    Evaluate generated networks with MIDNI algorithms
+    Args:
+    time_series_folder - The folder where the timeseries files are located.
+    gold_standard_folder - The folder where the gold standard files are located.
+    output_folder - the output folder
     '''
     #sizes=[i for i in range(10, 101, 10)]
     sizes = [10, 50, 100]
@@ -87,8 +87,8 @@ def experiment04():
         result = {}
         for sp in sps:
             experiment = {'timesteps': False, 'steps': None}
-            network_info = {'timeseries': fr'C:\caocao\gnw-master\tave_gen\train_val_nets\prediction\size{size}\sample{sp}.txt',
-                            'goldstandard': fr'C:\caocao\gnw-master\tave_gen\train_val_nets\size{size}\sample{sp}_goldstandard.txt',
+            network_info = {'timeseries': fr'{time_series_folder}\size{size}\sample{sp}.txt',
+                            'goldstandard': fr'{gold_standard_folder}\size{size}\sample{sp}_goldstandard.txt',
                             'goldstandard_signed': None,
                             'real_value': False,
                             'print_out': False}
@@ -100,17 +100,21 @@ def experiment04():
             evaluation_params = {'print_out': True}
 
             precision, recall, structural, dynamics, sample = Pipeline(network_info, kmean_params, mibni_params, evaluation_params, experiment).execute()
-            result[f'sample{sp}'] = {'precison': precision, 'recall': recall, 'structural': structural, 'dynamics':dynamics}
+            result[f'sample{sp}'] = {'precision': precision, 'recall': recall, 'structural': structural, 'dynamics':dynamics}
 
         result = pd.DataFrame(result)
-        result.to_csv(fr'C:\caocao\gnw-master\tave_gen\train_val_nets\prediction\f_size{size}_analysis.csv')  
+        result.to_csv(fr'{output_folder}\f_size{size}_analysis.csv')  
 
 
-def experiment05():
+def experiment05(time_series_folder, gold_standard_folder, output_folder):
     '''
-    Thí ngiệm này tách các mạng thành các subnetworks khác nhau dự theo số timestep,
-    huấn luyện mô hình trên các subnetwork này rồi sinh ra các mạng khác nhau với số
-    timestep đầy đủ 50
+    This experiment is based on the input network, the model will be trained based on 
+    different timesteps from 10, 20,...N and generate synthetic networks with 
+    the same number of timesteps as the original network.
+    Args:
+    time_series_folder - The folder where the timeseries files are located.
+    gold_standard_folder - The folder where the gold standard files are located.
+    output_folder - the output folder
     '''
     sizes=[i for i in range(10, 101, 10)]
     sps=[i for i in range(1,11, 1)]
@@ -118,23 +122,26 @@ def experiment05():
 
     for size in sizes:
         for sp in sps:
-            network = GeneNetwork(fr"C:\caocao\gnw-master\tave_gen\simple test\size{size}\sample{sp}_network.txt", 
-                                fr"C:\caocao\gnw-master\tave_gen\simple test\size{size}\sample{sp}_goldstandard.txt",None, False, 
+            network = GeneNetwork(fr"{time_series_folder}\size{size}\sample{sp}_network.txt", 
+                                fr"{gold_standard_folder}\size{size}\sample{sp}_goldstandard.txt",None, False, 
                                             print_out=False)
             for start, end in stps:
                 sub_network = network.getSubTimeStepsData(start=start, end=end)
                 sub_network.filename = f'{start}_{end}_{sub_network.filename}'
 
-                outpath = fr'C:\caocao\gnw-master\tave_gen\simple test\fake\size{size}\f_sample{sp}_{start}_{end}.txt'
+                outpath = fr'{output_folder}\size{size}\f_sample{sp}_{start}_{end}.txt'
 
                 vae = GVAE(sub_network)
                 vae.fit(epochs=10000)
                 vae.sample(outpath, rows=network.timestepsNumber)
 
-def experiment06():
+def experiment06(time_series_folder, gold_standard_folder, output_folder):
     '''
-    Thí nghiệm kiểm tra thuật toán truy hồi đối với nhiều mạng được sinh ra bởi autoencoder (fake)
-    có chia ra nhiều timestep để đánh giá
+    Evaluate generated networks with MIDNI algorithms
+    Args:
+    time_series_folder - The folder where the timeseries files are located.
+    gold_standard_folder - The folder where the gold standard files are located.
+    output_folder - the output folder
     '''
     #sizes=[i for i in range(10, 101, 10)]
     sizes=[10, 50, 100]
@@ -145,8 +152,8 @@ def experiment06():
             result = {}
             for start, end in stps:
                 experiment = {'timesteps': False, 'steps': None}
-                network_info = {'timeseries': fr'C:\caocao\gnw-master\tave_gen\simple test\ae_ct_network\size{size}\syn_samp{sp}_0_{end}.txt',
-                                'goldstandard': fr'C:\caocao\gnw-master\tave_gen\simple test\size{size}\sample{sp}_goldstandard.txt',
+                network_info = {'timeseries': fr'{time_series_folder}\size{size}\syn_samp{sp}_0_{end}.txt',
+                                'goldstandard': fr'{gold_standard_folder}\size{size}\sample{sp}_goldstandard.txt',
                                 'goldstandard_signed': None,
                                 'real_value': False,
                                 'print_out': False}
@@ -158,25 +165,30 @@ def experiment06():
                 evaluation_params = {'print_out': True}
 
                 precision, recall, structural, dynamics, sample = Pipeline(network_info, kmean_params, mibni_params, evaluation_params, experiment).execute()
-                result[f'st_0_{end}'] = {'precison': precision, 'recall': recall, 'structural': structural, 'dynamics':dynamics}
+                result[f'st_0_{end}'] = {'precision': precision, 'recall': recall, 'structural': structural, 'dynamics':dynamics}
 
             result = pd.DataFrame(result)
-            result.to_csv(fr'C:\caocao\gnw-master\tave_gen\simple test\ae_ct_network\size{size}\newf_size{size}_samp{sp}_0_{end}.csv')  
+            result.to_csv(fr'{output_folder}\size{size}\newf_size{size}_samp{sp}_0_{end}.csv')  
 
 
-def experiment07():
+def experiment07(time_series_folder, gold_standard_folder, output_folder):
     '''
-    Thử nghiệm so sánh cách sinh ra hai mạng từ một mô hình đã được huấn luyện. Một mạng được sinh ra khi predict
-    một mạng gốc, còn một mạng sinh ra khi predict một normal matrix có cùng kích thước với mạng gốc. Thử nghiệm này nhằm so sánh
-    hai phương pháp sinh mạng ngẫu nhiên
+    The experiment compares the generation of two networks from a trained model. One network is generated by predicting
+    an original network, and the other network is generated by predicting a normal matrix of the same size as the original network.
+    This experiment compares two random network generation methods.
+    -------------------------------------
+    Args:
+    time_series_folder - The folder where the timeseries files are located.
+    gold_standard_folder - The folder where the gold standard files are located.
+    output_folder - the output folder
     '''
     size = 50
     sample = [i for i in range(1,11, 1)]
     for sp in sample:
-        network = GeneNetwork(fr'C:\caocao\gnw-master\tave_gen\simple test\size{size}\sample{sp}_network.txt', 
-                            fr'C:\caocao\gnw-master\tave_gen\simple test\size{size}\sample{sp}_goldstandard.txt', timeseries=False)
+        network = GeneNetwork(fr'{time_series_folder}\size{size}\sample{sp}_network.txt', 
+                            fr'{gold_standard_folder}\size{size}\sample{sp}_goldstandard.txt', timeseries=False)
         autoencoder = load_model(fr'models/ae_model_50_sample{sp}_network.h5')
-        # Predict theo normal matrix
+        # Predict the normal matrix
         generated_latent_points = np.random.normal(size=(50, network.size*2))
         synthetic_data = autoencoder.predict(generated_latent_points)
         synthetic_data = np.abs(np.round(synthetic_data))
@@ -191,12 +203,12 @@ def experiment07():
         for i, row in enumerate(syn_network):
             row.insert(0, i)
         syn_network = np.array(syn_network)
-        path = fr'C:\caocao\gnw-master\tave_gen\simple test\compare\nw{size}_{sp}_normal.txt'
+        path = fr'{output_folder}\nw{size}_{sp}_normal.txt'
         header = 'Time'
         for i in range(network.size):
             header+='\t'+f'G{i+1}'
         np.savetxt(path, syn_network, delimiter='\t', header=header, fmt='%s')
-        # Predict theo orginal
+        # Predict the original
         orginal_predict_synthetic_data = autoencoder.predict(network.to_latents())
         orginal_predict_synthetic_data = np.abs(np.round(orginal_predict_synthetic_data))
         orginal_predict_synthetic_data = np.clip(orginal_predict_synthetic_data, 0, 2)
@@ -210,23 +222,28 @@ def experiment07():
         for i, row in enumerate(syn_network):
             row.insert(0, i)
         syn_network = np.array(syn_network)
-        path = fr'C:\caocao\gnw-master\tave_gen\simple test\compare\nw{size}_{sp}_orginal.txt'
+        path = fr'{output_folder}\nw{size}_{sp}_orginal.txt'
         np.savetxt(path, syn_network, delimiter='\t', header=header, fmt='%s')
 
 
-def experiment08():
+def experiment08(time_series_folder, gold_standard_folder, output_folder):
     '''
-    Thí nghiệm đánh giá các mạng sinh ra từ experiment07
+    Run MIDNI with the generated networks from experiment 07
+    -------------------------------------
+    Args:
+    time_series_folder - The folder where the timeseries files are located.
+    gold_standard_folder - The folder where the gold standard files are located.
+    output_folder - the output folder
     '''
     size = 50
     sps=[i for i in range(1,11, 1)]
-    types =['normal', 'orginal']
+    types =['normal', 'original']
     for t in types:
         result = {}
         for sp in sps:            
             experiment = {'timesteps': False, 'steps': None}
-            network_info = {'timeseries': fr'C:\caocao\gnw-master\tave_gen\simple test\compare\nw{size}_{sp}_{t}.txt',
-                            'goldstandard': fr'C:\caocao\gnw-master\tave_gen\simple test\size{size}\sample{sp}_goldstandard.txt',
+            network_info = {'timeseries': fr'{time_series_folder}\nw{size}_{sp}_{t}.txt',
+                            'goldstandard': fr'{gold_standard_folder}\size{size}\sample{sp}_goldstandard.txt',
                             'goldstandard_signed': None,
                             'real_value': False,
                             'print_out': False}
@@ -238,23 +255,28 @@ def experiment08():
             evaluation_params = {'print_out': True}
 
             precision, recall, structural, dynamics, sample = Pipeline(network_info, kmean_params, mibni_params, evaluation_params, experiment).execute()
-            result[f'sample_{sp}'] = {'precison': precision, 'recall': recall, 'structural': structural, 'dynamics':dynamics}
+            result[f'sample_{sp}'] = {'precision': precision, 'recall': recall, 'structural': structural, 'dynamics': dynamics}
 
         result = pd.DataFrame(result)
-        result.to_csv(fr'C:\caocao\gnw-master\tave_gen\simple test\compare\f_size{size}_{t}.csv')  
+        result.to_csv(fr'{output_folder}\f_size{size}_{t}.csv')  
 
-def experiment09():
+def experiment09(time_series_folder, gold_standard_folder, output_folder):
     '''
-    Thử nghiệm sinh mạng giả từ mô hình đã được huấn luyện trên các tập dữ liệu
-    gốc hạn chế theo timestep. Mạng sinh ra có timestep giống cái ban đầu, chưa sinh thêm
+    Generate networks from models trained on timestep-restricted original datasets. 
+    The generated network has the same timestep as the original one, without generating more.
+    -------------------------------------
+    Args:
+    time_series_folder - The folder where the timeseries files are located.
+    gold_standard_folder - The folder where the gold standard files are located.
+    output_folder - the output folder
     '''
     sizes=[i for i in range(10, 101, 10)]
     sps=[i for i in range(1,11, 1)]
     stps = [(0,i) for i in range(10,51,10)]
     for size in sizes:
         for sp in sps:
-            network = GeneNetwork(fr'C:\caocao\gnw-master\tave_gen\simple test\size{size}\sample{sp}_network.txt', 
-                            fr'C:\caocao\gnw-master\tave_gen\simple test\size{size}\sample{sp}_goldstandard.txt', timeseries=False)
+            network = GeneNetwork(fr'{time_series_folder}\size{size}\sample{sp}_network.txt', 
+                            fr'{gold_standard_folder}\size{size}\sample{sp}_goldstandard.txt', timeseries=False)
             
             for start, end in stps:
                 autoencoder = load_model(fr'models/ae_model_{size}_0_{end}_sample{sp}_network.h5')
@@ -273,27 +295,31 @@ def experiment09():
                 for i, row in enumerate(syn_network):
                     row.insert(0, i)
                 syn_network = np.array(syn_network)
-                path = fr'C:\caocao\gnw-master\tave_gen\simple test\synthetics\size{size}\syn_samp{sp}_{start}_{end}.txt'
+                path = fr'{output_folder}\size{size}\syn_samp{sp}_{start}_{end}.txt'
                 header = 'Time'
                 for i in range(network.size):
                     header+='\t'+f'G{i+1}'
                 np.savetxt(path, syn_network, delimiter='\t', header=header, fmt='%s')
 
 
-def experiment10():
+def experiment10(time_series_folder, gold_standard_folder, output_folder):
     '''
-    Thử nghiệm sinh mạng giả từ mô hình đã được huấn luyện trên các tập dữ liệu
-    gốc hạn chế theo timestep. Mạng sinh ra có timestep nhiều hơn so với mạng gốc được huấn luyện
-    Dữ liệu sinh ra theo phương pháp từng step một. Dùng một autoencoder khác đã được huấn luyện để
-    sinh ra từng step này...
+    Testing the artificial life from the model trained on the original data sets, limited by the timestep. 
+    The generated network has more timesteps than the original trained network. 
+    The data is generated in a step-by-step manner. Use another trained autoencoder to generate each of these steps...
+    -------------------------------------
+    Args:
+    time_series_folder - The folder where the timeseries files are located.
+    gold_standard_folder - The folder where the gold standard files are located.
+    output_folder - the output folder
     '''
     sizes=[10, 50, 100]
     sps=[i for i in range(1,11, 1)]
     stps = [(0,i) for i in range(10,51,10)]
     for size in sizes:
         for sp in sps:            
-            network = GeneNetwork(fr'C:\caocao\gnw-master\tave_gen\simple test\size{size}\sample{sp}_network.txt', 
-                            fr'C:\caocao\gnw-master\tave_gen\simple test\size{size}\sample{sp}_goldstandard.txt', timeseries=False)
+            network = GeneNetwork(fr'{time_series_folder}\size{size}\sample{sp}_network.txt', 
+                            fr'{gold_standard_folder}\size{size}\sample{sp}_goldstandard.txt', timeseries=False)
             
             for start, end in stps:
                 autoencoder = load_model(fr'models/ae_model_{size}_0_{end}_sample{sp}_network.h5')
@@ -313,8 +339,8 @@ def experiment10():
                 # vt = np.array(syn_network[-1])
                 # vt = np.reshape(vt, (-1,network.size))
                 # print(vt)
-                # Sinh tiếp các bước tiếp theo sử dụng autoencoder đã được huấn luyện để dự đoán giá trị của những bước tiếp theo
-                ae_vt = load_model(fr'C:\caocao\gnw-master\tave_gen\simple test\vt_step_models\ae_{size}_{sp}_{start}_{end}.h5')
+                # Generate next steps using a trained autoencoder to predict the value of the next steps
+                ae_vt = load_model(fr'\vt_step_models\ae_{size}_{sp}_{start}_{end}.h5')
                 for i in range(network.timestepsNumber - end):
                     vt = np.reshape(np.array(syn_network[-1]), (-1,network.size))
                     vt_plus = ae_vt.predict(vt)
@@ -325,7 +351,7 @@ def experiment10():
                 for i, row in enumerate(syn_network):
                     row.insert(0, i)
                 syn_network = np.array(syn_network)
-                path = fr'C:\caocao\gnw-master\tave_gen\simple test\ae_ct_network\size{size}\syn_samp{sp}_{start}_{end}.txt'
+                path = fr'{output_folder}\size{size}\syn_samp{sp}_{start}_{end}.txt'
                 header = 'Time'
                 for i in range(network.size):
                     header+='\t'+f'G{i+1}'
