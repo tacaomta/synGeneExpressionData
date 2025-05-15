@@ -731,8 +731,7 @@ def experiment22(timeseries_folder, goldstandard_folder, models_folder, output_f
 
 def experiment23(size, sample, epochs, lr):
     '''
-    Thí nghiệm huấn luyện với mẫu tinh chỉnh cho mô hình dự đoán các bước step tiếp theo
-
+    Fine-tune some specific cases
     '''
     network = GeneNetwork(fr'C:\caocao\gnw-master\tave_gen\simple test\timestep100\size{size}\sample{sample}_network.txt', 
                                  None, timeseries=False)
@@ -747,27 +746,35 @@ def experiment23(size, sample, epochs, lr):
                   loss_figure=fr'C:\caocao\gnw-master\tave_gen\simple test\timestep100\history\loss_{size}_{sample}_{start}_{end}_lr{lr}.png')
         
 
-def experiment24():
+def experiment24(network_folder, output_folder):
     '''
-    Load network and extent its timesteps
+    Extend a network with a timestep number 
+    -------------------------------------
+    Args:
+    network_folder - The folder where the ground-truth networks, gold standard files, and update table files are located.
+    output_folder - The folder where the extended networks are saved.
     '''
     sizes=[10, 50, 100]
     sps=[i for i in range(1,11, 1)]
     for size in sizes:
         for sp in sps:
-            network = GeneNetwork(path=fr'C:\caocao\gnw-master\tave_gen\simple test\size{size}\sample{sp}_network.txt',
-                                goldstandard=fr'C:\caocao\gnw-master\tave_gen\simple test\size{size}\sample{sp}_goldstandard.txt',
+            network = GeneNetwork(path=fr'{network_folder}\size{size}\sample{sp}_network.txt',
+                                goldstandard=fr'{network_folder}\size{size}\sample{sp}_goldstandard.txt',
                                 goldstandard_signed=None,
-                                network_structure=fr'C:\caocao\gnw-master\tave_gen\simple test\size{size}\sample{sp}_structure.txt',
-                                update_table=fr'C:\caocao\gnw-master\tave_gen\simple test\size{size}\sample{sp}_updateTables.txt', timeseries=False)
+                                network_structure=fr'{network_folder}\size{size}\sample{sp}_structure.txt',
+                                update_table=fr'{network_folder}\size{size}\sample{sp}_updateTables.txt', timeseries=False)
             network.extendTimeStep(50)
-            network.saveNetwork(fr'C:\caocao\gnw-master\tave_gen\simple test\extent_timesteps100\size{size}', sample_name=f'ext_sample{sp}')
+            network.saveNetwork(fr'{}\size{size}', sample_name=f'ext_sample{sp}')
 
 
-def experiment25():
+def experiment25(timeseries_folder, goldstandard_folder, output_folder):
     '''
-    Thí nghiệm kiểm tra thuật toán truy hồi đối với nhiều mạng được sinh ra bởi thuật toán sinh ra mạng.
-    Các mạng này được coi là các mạng gốc
+    Run MIDNI on the dataset with 100 time-steps
+    -------------------------------------
+    Args:
+    timeseries_folder - The folder where the ground-truth networks are located.
+    goldstandard_folder - The folder where the gold standard files are located.
+    output_folder - the output folder
     '''
     #sizes=[i for i in range(10, 101, 10)]
     sizes=[10, 50, 100]
@@ -776,8 +783,8 @@ def experiment25():
     for size in sizes:
         for sp in sps:
             experiment = {'timesteps': True, 'steps': stps}
-            network_info = {'timeseries': fr'C:\caocao\gnw-master\tave_gen\simple test\extent_timesteps100\size{size}\ext_sample{sp}_network.txt',
-                            'goldstandard': fr'C:\caocao\gnw-master\tave_gen\simple test\extent_timesteps100\size{size}\ext_sample{sp}_goldstandard.txt',
+            network_info = {'timeseries': fr'{timeseries_folder}\size{size}\ext_sample{sp}_network.txt',
+                            'goldstandard': fr'{goldstandard_folder}\size{size}\ext_sample{sp}_goldstandard.txt',
                             'goldstandard_signed': None,
                             'real_value': False,
                             'print_out': False}
@@ -791,7 +798,7 @@ def experiment25():
             precision, recall, structural, dynamics, sample = Pipeline(network_info, kmean_params, mibni_params, evaluation_params, experiment).execute()
             if len(sample)!=0:
                 result = pd.DataFrame(sample)
-                result.to_csv(fr'C:\caocao\gnw-master\tave_gen\simple test\extent_timesteps100\size{size}\analysis_samp{sp}.csv')  
+                result.to_csv(fr'{output_folder}\size{size}\analysis_samp{sp}.csv')  
 #experiment22()
 #experiment23(100, 7, 1000, 0.0001)
 #experiment21(100, 7, 20000)
@@ -799,7 +806,12 @@ def experiment25():
 def experiment26(size, sample, epochs, folder_network_input, folder_model1, folder_model2, folder_network_synthetic,
                  folder_distance, folder_performance, train_model1=True):
     '''
-    Thí nghiệm sinh giả mạng, tiến hành đánh giá trên bộ dữ liệu 100 timesteps
+    Generate synthetic networks, evaluate them (100 timesteps)
+    -------------------------------------
+    Args:
+    timeseries_folder - The folder where the ground-truth networks are located.
+    goldstandard_folder - The folder where the gold standard files are located.
+    output_folder - the output folder
     '''
     result={}
     network = GeneNetwork(path= fr"{folder_network_input}\size{size}\ext_sample{sample}_network.txt",
