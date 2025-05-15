@@ -590,21 +590,28 @@ def experiment18(size, sample, step, epochs):
 
 
 
-def experiment19():
+def experiment19(output_folder):
     '''
-    Thí nghiệm sinh ra tập dữ liệu có 100 timesteps
+    Experiments to create ground-truth networks. These networks contain 100 timesteps
+    -------------------------------------
+    Args:
+    output_folder - the output folder where the ground-truth networks are saved
     '''
     size = [10, 50, 100, 200]
     sample = [i for i in range(1, 11, 1)]
     for si in size:
         for sam in sample:
-            folder=fr'C:\caocao\gnw-master\tave_gen\simple test\timestep100\size{si}'
-            gen = Generation(size=si,timestep_number=100, bits=(0, 1, 2), timelag=1, folder=folder)
+            gen = Generation(size=si,timestep_number=100, bits=(0, 1, 2), timelag=1, folder=output_folder)
             gen.generate(f'sample{sam}')
 
-def experiment20():
+def experiment20(timeseries_folder, goldstandard_folder, output_folder):
     '''
-    Thí nghiệm kiểm tra thuật toán truy hồi đối với nhiều mạng được sinh ra trên bộ dữ liệu 100 timestep gốc
+    Run MIDNI on the datasets created in experiment 19.
+    -------------------------------------
+    Args:
+    timeseries_folder - The folder where the ground-truth networks are located.
+    goldstandard_folder - The folder where the gold standard files are located.
+    output_folder - the output folder
     '''
     #sizes=[i for i in range(10, 101, 10)]
     sizes=[10, 50, 100, 200]
@@ -613,8 +620,8 @@ def experiment20():
     for size in sizes:
         for sp in sps:
             experiment = {'timesteps': True, 'steps': stps}
-            network_info = {'timeseries': fr'C:\caocao\gnw-master\tave_gen\simple test\timestep100\size{size}\sample{sp}_network.txt',
-                            'goldstandard': fr'C:\caocao\gnw-master\tave_gen\simple test\timestep100\size{size}\sample{sp}_goldstandard.txt',
+            network_info = {'timeseries': fr'{timeseries_folder}\size{size}\sample{sp}_network.txt',
+                            'goldstandard': fr'{goldstandard_folder}\size{size}\sample{sp}_goldstandard.txt',
                             'goldstandard_signed': None,
                             'real_value': False,
                             'print_out': False}
@@ -626,24 +633,29 @@ def experiment20():
             evaluation_params = {'print_out': True}
 
             precision, recall, structural, dynamics, sample = Pipeline(network_info, kmean_params, mibni_params, evaluation_params, experiment).execute()
-            #result[f'st_0_{end}'] = {'precison': precision, 'recall': recall, 'structural': structural, 'dynamics':dynamics}
+            #result[f'st_0_{end}'] = {'precision': precision, 'recall': recall, 'structural': structural, 'dynamics':dynamics}
 
             result = pd.DataFrame(sample)
-            result.to_csv(fr'C:\caocao\gnw-master\tave_gen\simple test\timestep100\size{size}\sp{sp}.csv')  
+            result.to_csv(fr'{output_folder}\size{size}\sp{sp}.csv')  
 
 
-def experiment21(size, sample, epochs):
+def experiment21(timeseries_folder, goldstandard_folder, models_folder, output_folder, size, sample, epochs):
     '''
-    Thí nghiệm sinh giả mạng, tiến hành đánh giá trên bộ dữ liệu 100 timesteps
+    Generate synthetic networks, evaluate using MIDNI 
+    -------------------------------------
+    Args:
+    timeseries_folder - The folder where the ground-truth networks are located.
+    goldstandard_folder - The folder where the gold standard files are located.
+    output_folder - the output folder
     '''
     result={}
-    network = GeneNetwork(fr"C:\caocao\gnw-master\tave_gen\simple test\timestep100\size{size}\sample{sample}_network.txt",
-                          fr'C:\caocao\gnw-master\tave_gen\simple test\timestep100\size{size}\sample{sample}_goldstandard.txt' 
+    network = GeneNetwork(fr"{timeseries_folder}\size{size}\sample{sample}_network.txt",
+                          fr'{goldstandard_folder}\size{size}\sample{sample}_goldstandard.txt' 
                          ,None, False, print_out=False)
     for end in range(10, 101, 10):
         sub = network.getSubTimeStepsData(0, end)
 
-        path = fr'C:\caocao\gnw-master\tave_gen\simple test\timestep100\models\ae_{size}_samp{sample}_0_{end}.h5'
+        path = fr'{models_folder}\models\ae_{size}_samp{sample}_0_{end}.h5'
         vae = GVAE(sub)
         vae.fit(epochs=epochs, model_save=path)
 
@@ -660,7 +672,7 @@ def experiment21(size, sample, epochs):
             if i==len(synthetic_data)-1:
                 syn_network.append(list(synthetic_data[i])[network.size:])
         
-        ae_vt = load_model(fr'C:\caocao\gnw-master\tave_gen\simple test\timestep100\vt_models\ae_{size}_{sample}_0_{end}.h5')
+        ae_vt = load_model(fr'{models_folder}\vt_models\ae_{size}_{sample}_0_{end}.h5')
         for i in range(network.timestepsNumber - end):
             vt = np.reshape(np.array(syn_network[-1]), (-1,network.size))
             vt_plus = ae_vt.predict(vt)
@@ -672,7 +684,7 @@ def experiment21(size, sample, epochs):
         for i, row in enumerate(syn_network):
             row.insert(0, i)
         syn_network = np.array(syn_network)
-        path = fr'C:\caocao\gnw-master\tave_gen\simple test\timestep100\synthetics\size{size}\samp{sample}_0_{end}.txt'
+        path = fr'{output_folder}\size{size}\samp{sample}_0_{end}.txt'
         header = 'Time'
         for i in range(network.size):
             header+='\t'+f'G{i+1}'
@@ -680,8 +692,8 @@ def experiment21(size, sample, epochs):
 
         # Evaluation
         experiment = {'timesteps': False, 'steps': None}
-        network_info = {'timeseries': fr'C:\caocao\gnw-master\tave_gen\simple test\timestep100\synthetics\size{size}\samp{sample}_0_{end}.txt',
-                        'goldstandard': fr'C:\caocao\gnw-master\tave_gen\simple test\timestep100\size{size}\sample{sample}_goldstandard.txt',
+        network_info = {'timeseries': fr'{output_folder}\size{size}\samp{sample}_0_{end}.txt',
+                        'goldstandard': fr'{goldstandard_folder}\size{size}\sample{sample}_goldstandard.txt',
                         'goldstandard_signed': None,
                         'real_value': False,
                         'print_out': False}
@@ -693,28 +705,28 @@ def experiment21(size, sample, epochs):
         evaluation_params = {'print_out': True}
 
         p, r, st, dy, sp = Pipeline(network_info, kmean_params, mibni_params, evaluation_params, experiment).execute()
-        result[f'st_0_{end}'] = {'precison': p, 'recall': r, 'structural': st, 'dynamics':dy}
+        result[f'st_0_{end}'] = {'precision': p, 'recall': r, 'structural': st, 'dynamics':dy}
         
 
         # Headmap
-        synthetic_network = GeneNetwork(fr'C:\caocao\gnw-master\tave_gen\simple test\timestep100\synthetics\size{size}\samp{sample}_0_{end}.txt', 
+        synthetic_network = GeneNetwork(fr'{output_folder}\size{size}\samp{sample}_0_{end}.txt', 
                         None, timeseries=False)
         a, matrix = synthetic_network.compareTo(network)
         plt.clf()
         sns.heatmap(matrix, annot=False, cmap='YlGnBu')
         plt.title(f'Network distance')
-        plt.savefig(fr'C:\caocao\gnw-master\tave_gen\simple test\timestep100\synthetics\size{size}\differences2\sp{sample}_0_{end}.png')
+        plt.savefig(fr'{output_folder}\size{size}\differences2\sp{sample}_0_{end}.png')
     result = pd.DataFrame(result)
-    result.to_csv(fr'C:\caocao\gnw-master\tave_gen\simple test\timestep100\synthetics\size{size}\sp{sample}.csv') 
+    result.to_csv(fr'{output_folder}\synthetics\size{size}\sp{sample}.csv') 
 
-def experiment22():
+def experiment22(timeseries_folder, goldstandard_folder, models_folder, output_folder):
     '''
-    Thí nghiệm chạy hàng loạt hàm 21
+    Run experiment 21 on the whole dataset
     '''
     for size in [10, 50, 100, 200]:
         for samp in range(1,11, 1):
             epoch = 500 if size<50 else 1000 if size<100 else 5000 if size<200 else 10000
-            experiment21(size, samp, epoch)
+            experiment21(timeseries_folder, goldstandard_folder, models_folder, output_folder, size, samp, epoch)
 
 
 def experiment23(size, sample, epochs, lr):
