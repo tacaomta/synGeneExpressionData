@@ -12,9 +12,13 @@ from ae_prediction import Vt_prediction
 from gene_gan import GENEGAN
 
 
-def experiment01():
+def experiment01(time_series_file, gold_standard_file, output_file):
     '''
     This experiment generates a network from an existing network.
+    Args:
+    time_series_file - Path of a time series file (input network)
+    gold_standard_file - Path of a gold standard file
+    output_file - Path of the output file.
     '''
     network = GeneNetwork(fr"C:\caocao\gnw-master\tave_gen\hybrid\s10\sample1_network.txt", 
                         fr"C:\caocao\gnw-master\tave_gen\hybrid\s10\sample1_goldstandard.txt",None, False, 
