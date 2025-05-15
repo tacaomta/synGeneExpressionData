@@ -517,10 +517,10 @@ def experiment17(original_folder, synthetic_folder, output_folder):
     experiment16(original_folder, synthetic_folder, output_folder)
 
 
-########################## Điều chỉnh các tham số khi huấn luyện tập dữ liệu không có nhiễu #######################
+########################## Adjust some specific cases (no noise) #######################
 def experiment18(size, sample, step, epochs):
     '''
-    Điều chỉnh lại một số trường hợp được chọn
+    Adjust some specific cases (no noise)
     '''
 
     network = GeneNetwork(fr"C:\caocao\gnw-master\tave_gen\simple test\size{size}\sample{sample}_network.txt", 
