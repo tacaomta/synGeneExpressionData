@@ -385,7 +385,7 @@ def experiment11(time_series_folder, gold_standard_folder, output_folder):
 
 def experiment12(time_series_folder, gold_standard_folder, output_folder):
     '''
-    Run MIDNI with networks generated from the Experiment 11
+    Run MIDNI with networks generated from Experiment 11
     -------------------------------------
     Args:
     time_series_folder - The folder where the timeseries files are located.
@@ -809,9 +809,15 @@ def experiment26(size, sample, epochs, folder_network_input, folder_model1, fold
     Generate synthetic networks, evaluate them (100 timesteps)
     -------------------------------------
     Args:
-    timeseries_folder - The folder where the ground-truth networks are located.
-    goldstandard_folder - The folder where the gold standard files are located.
-    output_folder - the output folder
+    size - size of networks
+    sample - number of samples in each network size
+    pochs - training epoch
+    folder_network_input - ground-truth network
+    folder_model1 - saved models folder
+    folder_model2 - saved models folder
+    folder_network_synthetic - folder where synthetic networks are saved
+    folder_distance - folder contains distance figures
+    folder_performance - folder contains MIDNI performance
     '''
     result={}
     network = GeneNetwork(path= fr"{folder_network_input}\size{size}\ext_sample{sample}_network.txt",
@@ -871,7 +877,7 @@ def experiment26(size, sample, epochs, folder_network_input, folder_model1, fold
         evaluation_params = {'print_out': True}
 
         p, r, st, dy, sp = Pipeline(network_info, kmean_params, mibni_params, evaluation_params, experiment).execute()
-        result[f'st_0_{end}'] = {'precison': p, 'recall': r, 'structural': st, 'dynamics':dy}
+        result[f'st_0_{end}'] = {'precision': p, 'recall': r, 'structural': st, 'dynamics':dy}
         
 
         # Headmap
@@ -887,25 +893,18 @@ def experiment26(size, sample, epochs, folder_network_input, folder_model1, fold
     return result
 
 
-def experiment27():
+def experiment27(folder_network_input, folder_model1, folder_model2, folder_network_synthetic, folder_distance, folder_performance):
     '''
-    chạy nhiều lần với hàm 26
+    Run experiment 26 on the entire dataset
     '''
     sizes=[10, 50, 100]
     sps=[i for i in range(1,11, 1)]
     for size in sizes:
-        #result[f'st_0_{end}'] = {'precison': p, 'recall': r, 'structural': st, 'dynamics':dy}
-        average = {f'st_0_{end}':{'precison': 0, 'recall': 0, 'structural': 0, 'dynamics':0} for end in range(10,101,10)}
+        #result[f'st_0_{end}'] = {'precision': p, 'recall': r, 'structural': st, 'dynamics':dy}
+        average = {f'st_0_{end}':{'precision': 0, 'recall': 0, 'structural': 0, 'dynamics':0} for end in range(10,101,10)}
         epochs = 1000 if size==10 else 2000 if size==50 else 5000
         for sp in sps:
-            result = experiment26(size=size, sample=sp, epochs=epochs, 
-                         folder_network_input=fr'C:\caocao\gnw-master\tave_gen\simple test\extent_timesteps100', 
-                         folder_model1=fr'C:\caocao\gnw-master\tave_gen\simple test\extent_timesteps100\synthetic\model1', 
-                         folder_model2=fr'C:\caocao\gnw-master\tave_gen\simple test\extent_timesteps100\synthetic\model2', 
-                         folder_network_synthetic=fr'C:\caocao\gnw-master\tave_gen\simple test\extent_timesteps100\synthetic\networks',
-                        folder_distance=fr'C:\caocao\gnw-master\tave_gen\simple test\extent_timesteps100\synthetic\distances', 
-                        folder_performance=fr'C:\caocao\gnw-master\tave_gen\simple test\extent_timesteps100\synthetic\performance',
-                        train_model1=False)
+            result = experiment26(size=size, sample=sp, epochs=epochs, folder_network_input, folder_model1, folder_model2, folder_network_synthetic, folder_distance, folder_performance, train_model1=False)
             for k, v in result.items():
                 for subkey in v.keys():
                     average[k][subkey]+=v[subkey]
@@ -913,12 +912,20 @@ def experiment27():
             for subkey in v.keys():
                 average[k][subkey]/=10
         average = pd.DataFrame(average)
-        average.to_csv(fr'C:\caocao\gnw-master\tave_gen\simple test\extent_timesteps100\synthetic\performance\average_size{size}.csv')
+        average.to_csv(fr'{folder_performance}\average_size{size}.csv')
 
 def experiment28(size, sample, epochs, lr, folder_network, folder_model, folder_loss):
     '''
-    Thí nghiệm huấn luyện với mẫu tinh chỉnh cho mô hình dự đoán các bước step tiếp theo trên dữ liệu extent
-
+    Fine-tune some specific cases
+    -------------------------------------
+    Args:
+    size - size of networks
+    sample - number of samples in each network size
+    pochs - training epoch
+    lr - learning rate
+    folder_network - ground-truth network
+    folder_model - saved models folder
+    folder_loss - folder contains loss visualization
     '''
     network = GeneNetwork(fr'{folder_network}\size{size}\ext_sample{sample}_network.txt', 
                                  None, timeseries=False)
@@ -931,7 +938,7 @@ def experiment28(size, sample, epochs, lr, folder_network, folder_model, folder_
 
 def experiment29():
     '''
-    Chạy một lúc nhiều hàm 28
+    Run experiment 28 on the dataset
     '''
     sizes=[100]
     sps=[i for i in range(8,11, 1)]
@@ -943,50 +950,29 @@ def experiment29():
                          folder_loss=r'C:\caocao\gnw-master\tave_gen\simple test\extent_timesteps100\synthetic\history')
 
 
-
-def experiment30():
+def experiment31(output_folder):
     '''
-    Ví dụ sinh network từ mạng GAN
-    '''
-    network = GeneNetwork(fr'C:\caocao\gnw-master\tave_gen\simple test\extent_timesteps100\size10\ext_sample4_network.txt', 
-                                 goldstandard=None, timeseries=False)
-    gene_gan = GENEGAN(network=network)
-    gene_gan.fit(lr=0.0001, history_path=fr'C:\caocao\gnw-master\tave_gen\simple test\extent_timesteps100\gan_model\history\{network.filename}.png')
-    gene_gan.sample(number_sample=50, path=fr'C:\caocao\gnw-master\tave_gen\simple test\extent_timesteps100\gan_model\networks\{network.filename}.txt')
-
-#experiment29()
-#experiment27()
-
-#experiment28(100, 7, 5000, lr=0.0005,folder_network=r'C:\caocao\gnw-master\tave_gen\simple test\extent_timesteps100', 
-#                         folder_model=r'C:\caocao\gnw-master\tave_gen\simple test\extent_timesteps100\synthetic\adjustment', 
-#                         folder_loss=r'C:\caocao\gnw-master\tave_gen\sim ple test\extent_timesteps100\synthetic\adjustment')
-
-
-# experiment26(size=100, sample=7, epochs=5000, 
-#                          folder_network_input=fr'C:\caocao\gnw-master\tave_gen\simple test\extent_timesteps100', 
-#                          folder_model1=fr'C:\caocao\gnw-master\tave_gen\simple test\extent_timesteps100\synthetic\model1', 
-#                          folder_model2=fr'C:\caocao\gnw-master\tave_gen\simple test\extent_timesteps100\synthetic\adjustment', 
-#                          folder_network_synthetic=fr'C:\caocao\gnw-master\tave_gen\simple test\extent_timesteps100\synthetic\adjustment',
-#                         folder_distance=fr'C:\caocao\gnw-master\tave_gen\simple test\extent_timesteps100\synthetic\adjustment', 
-#                         folder_performance=fr'C:\caocao\gnw-master\tave_gen\simple test\extent_timesteps100\synthetic\adjustment')
-
-def experiment31():
-    '''
-    tạo bộ dữ liệu Bolean để test các thuật toán truy hồi Bolean network
-    Bộ dữ liệu cũng gồm có 3 group size: 10, 50, 100 với timestep là 100 
-    giống như bộ dữ liệu triple level
+    Experiments to create Boolean ground-truth networks. These networks contain 100 timesteps
+    -------------------------------------
+    Args:
+    output_folder - the output folder where the Boolean ground-truth networks are saved
     '''
     size = [10, 50, 100]
     sample = [i for i in range(1, 11, 1)]
     for si in size:
         for sam in sample:
-            folder=fr'C:\caocao\gnw-master\tave_gen\simple test\extent_timesteps100\boolean\size{si}'
+            folder=fr'{output_folder}\size{si}'
             gen = Generation(size=si,timestep_number=100, bits=(0, 1), timelag=1, folder=folder)
             gen.generate(f'sample{sam}')
 
-def experiment32():
+def experiment32(timeseries_folder, goldstandard_folder, output_folder):
     '''
-    Truy hồi trên bộ dữ liệu Boolean gốc
+    Run MIDNI on the datasets created in experiment 31.
+    -------------------------------------
+    Args:
+    timeseries_folder - The folder where the ground-truth networks are located.
+    goldstandard_folder - The folder where the gold standard files are located.
+    output_folder - the output folder
     '''
     sizes=[100]
     sps=[i for i in range(10,11, 1)]
@@ -994,8 +980,8 @@ def experiment32():
     for size in sizes:
         for sp in sps:
             experiment = {'timesteps': True, 'steps': stps}
-            network_info = {'timeseries': fr'C:\caocao\gnw-master\tave_gen\simple test\extent_timesteps100\boolean\size{size}\sample{sp}_network.txt',
-                            'goldstandard': fr'C:\caocao\gnw-master\tave_gen\simple test\extent_timesteps100\boolean\size{size}\sample{sp}_goldstandard.txt',
+            network_info = {'timeseries': fr'{timeseries_folder}\size{size}\sample{sp}_network.txt',
+                            'goldstandard': fr'{goldstandard_folder}\size{size}\sample{sp}_goldstandard.txt',
                             'goldstandard_signed': None,
                             'real_value': False,
                             'print_out': False}
@@ -1009,22 +995,25 @@ def experiment32():
             precision, recall, structural, dynamics, sample = Pipeline(network_info, kmean_params, mibni_params, evaluation_params, experiment).execute()
             if len(sample)!=0:
                 result = pd.DataFrame(sample)
-                result.to_csv(fr'C:\caocao\gnw-master\tave_gen\simple test\extent_timesteps100\boolean\size{size}\analysis_samp{sp}.csv') 
+                result.to_csv(fr'{output_folder}\size{size}\analysis_samp{sp}.csv') 
 
 
-def experiment33():
+def experiment33(folder_network, folder_model, folder_loss):
     '''
-    Huấn luyện model2 trên bộ dữ liệu boolean
+    Training model on the Boolean ground-truth dataset
+    -------------------------------------
+    Args:
+    folder_network - The folder where the ground-truth networks are located.
+    folder_model - The folder where trained models are saved.
+    folder_loss - the folder where the loss visualization is saved.
     '''
-    folder_model = r'C:\caocao\gnw-master\tave_gen\simple test\extent_timesteps100\boolean\vt_models'
-    folder_loss = r'C:\caocao\gnw-master\tave_gen\simple test\extent_timesteps100\boolean\loss'
     lr = 0.0001
     sizes=[100]
     sps=[i for i in range(1,11, 1)]
     for size in sizes:
         epochs = 1000 if size==10 else 2000 if size==50 else 10000
         for sp in sps:
-            network = GeneNetwork(fr'C:\caocao\gnw-master\tave_gen\simple test\extent_timesteps100\boolean\size{size}\sample{sp}_network.txt', timeseries=False)
+            network = GeneNetwork(fr'{folder_network}\size{size}\sample{sp}_network.txt', timeseries=False)
             steps = [(0,i) for i in range(10,101,10)]
             for start, end in steps:
                 sub = network.getSubTimeStepsData(start, end)
@@ -1036,7 +1025,18 @@ def experiment33():
 def experiment34(size, sample, epochs, folder_network_input, folder_model1, folder_model2, folder_network_synthetic,
                  folder_distance, folder_performance, train_model1=True):
     '''
-    Thí nghiệm sinh giả mạng, tiến hành đánh giá trên bộ dữ liệu 100 timesteps: Boolean networks
+    Generate Boolean synthetic networks
+    -------------------------------------
+    Args:
+    size - size of networks
+    sample - number of samples in each network size
+    pochs - training epoch
+    folder_network_input - ground-truth network
+    folder_model1 - saved models folder 
+    folder_model2 - saved models folder 
+    folder_network_synthetic - folder where synthetic networks are saved
+    folder_distance - folder contains distance figures
+    folder_performance - folder contains MIDNI performance
     '''
     result={}
     network = GeneNetwork(path= fr"{folder_network_input}\size{size}\sample{sample}_network.txt",
@@ -1096,7 +1096,7 @@ def experiment34(size, sample, epochs, folder_network_input, folder_model1, fold
         evaluation_params = {'print_out': True}
 
         p, r, st, dy, sp = Pipeline(network_info, kmean_params, mibni_params, evaluation_params, experiment).execute()
-        result[f'st_0_{end}'] = {'precison': p, 'recall': r, 'structural': st, 'dynamics':dy}
+        result[f'st_0_{end}'] = {'precision': p, 'recall': r, 'structural': st, 'dynamics':dy}
         
 
         # Headmap
@@ -1112,25 +1112,25 @@ def experiment34(size, sample, epochs, folder_network_input, folder_model1, fold
     return result
 
 
-def experiment35():
+def experiment35(folder_network_input, folder_model1, folder_model2, folder_network_synthetic, folder_distance, folder_performance):
     '''
-    chạy nhiều lần với hàm 34
+    Run experiment 34 on the entire dataset
     '''
     sizes=[100]
     sps=[i for i in range(1,11, 1)]
     for size in sizes:
-        #result[f'st_0_{end}'] = {'precison': p, 'recall': r, 'structural': st, 'dynamics':dy}
-        average = {f'st_0_{end}':{'precison': 0, 'recall': 0, 'structural': 0, 'dynamics':0} for end in range(10,101,10)}
+        #result[f'st_0_{end}'] = {'precision': p, 'recall': r, 'structural': st, 'dynamics':dy}
+        average = {f'st_0_{end}':{'precision': 0, 'recall': 0, 'structural': 0, 'dynamics':0} for end in range(10,101,10)}
         epochs = 1000 if size==10 else 2000 if size==50 else 5000
         for sp in sps:
            # if size==50 and sp<9: continue
             result = experiment34(size=size, sample=sp, epochs=epochs, 
-                         folder_network_input=r'C:\caocao\gnw-master\tave_gen\simple test\extent_timesteps100\boolean', 
-                         folder_model1=r'C:\caocao\gnw-master\tave_gen\simple test\extent_timesteps100\boolean\models', 
-                         folder_model2=r'C:\caocao\gnw-master\tave_gen\simple test\extent_timesteps100\boolean\vt_models', 
-                         folder_network_synthetic=r'C:\caocao\gnw-master\tave_gen\simple test\extent_timesteps100\boolean\synthetics\networks',
-                        folder_distance=r'C:\caocao\gnw-master\tave_gen\simple test\extent_timesteps100\boolean\synthetics\distances', 
-                        folder_performance=r'C:\caocao\gnw-master\tave_gen\simple test\extent_timesteps100\boolean\synthetics\performance',
+                         folder_network_input, 
+                         folder_model1=, 
+                         folder_model2=, 
+                         folder_network_synthetic=,
+                        folder_distance=r, 
+                        folder_performance,
                         train_model1=False)
             for k, v in result.items():
                 for subkey in v.keys():
@@ -1139,7 +1139,7 @@ def experiment35():
             for subkey in v.keys():
                 average[k][subkey]/=10
         average = pd.DataFrame(average)
-        average.to_csv(fr'C:\caocao\gnw-master\tave_gen\simple test\extent_timesteps100\boolean\synthetics\performance\average_size{size}.csv')
+        average.to_csv(fr'{folder_performance}\average_size{size}.csv')
 
 #
 #experiment33()
